@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 // 1. Imports
-
 use frame_support::{decl_module, decl_storage, decl_event, decl_error, ensure};
 use frame_system::ensure_signed;
 use sp_std::vec::Vec;
