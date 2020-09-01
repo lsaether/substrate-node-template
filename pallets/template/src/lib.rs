@@ -15,8 +15,8 @@ pub trait Trait: frame_system::Trait {
 decl_storage! {
 	trait Store for Module<T: Trait> as POE {
 		// The storage item for our proofs.
-		// It maps a proof to the user who made the claim and when they made it.
-		Proofs: map hasher(blake2_128_concat) Vec<u8> => (T::AccountId, T::BlockNumber);
+		// It maps a proof to the user who made the claim, when they made it, and when it was last updated.
+		Proofs: map hasher(blake2_128_concat) Vec<u8> => (T::AccountId, T::BlockNumber, T::BlockNumber);
 	}
 }
 
@@ -30,6 +30,8 @@ decl_event! {
 		ClaimCreated(AccountId, Vec<u8>),
 		/// Event emitted when a claim is revoked by the owner. [who, claim]
 		ClaimRevoked(AccountId, Vec<u8>),
+		/// Event emitted when a claim ownership changes. [who, claim, new_owner]
+		ClaimOwnerChanged(AccountId, Vec<u8>, AccountId),
 	}
 }
 
@@ -68,7 +70,7 @@ decl_module! {
 			let current_block = <frame_system::Module<T>>::block_number();
 
 			// Store the proof with the sender and the block number.
-			Proofs::<T>::insert(&proof, (&sender, current_block));
+			Proofs::<T>::insert(&proof, (&sender, current_block, current_block));
 
 			// Emit an event that the claim was created.
 			Self::deposit_event(RawEvent::ClaimCreated(sender, proof));
@@ -82,7 +84,7 @@ decl_module! {
 			ensure!(Proofs::<T>::contains_key(&proof), Error::<T>::NoSuchProof);
 
 			// Get the owner of the claim.
-			let (owner, _) = Proofs::<T>::get(&proof);
+			let (owner, _, _) = Proofs::<T>::get(&proof);
 
 			// Verify that sender of the current call is the claim owner.
 			ensure!(sender == owner, Error::<T>::NotProofOwner);
@@ -92,6 +94,26 @@ decl_module! {
 
 			// Emit an event that the claim was revoked.
 			Self::deposit_event(RawEvent::ClaimRevoked(sender, proof));
+		}
+
+		// Allows the owner to transfer a claim.
+		#[weight = 10_000]
+		fn transfer_claim(origin, proof: Vec<u8>, new_owner: T::AccountId) {
+			let sender = ensure_signed(origin)?;
+
+			ensure!(Proofs::<T>::contains_key(&proof), Error::<T>::NoSuchProof);
+
+			let (owner, _, _) = Proofs::<T>::get(&proof);
+			ensure!(sender == owner, Error::<T>::NotProofOwner);
+
+			let current_block = <frame_system::Module<T>>::block_number();
+
+			Proofs::<T>::mutate(&proof, |p| {
+				let (_, origination_block, _) = p;
+				*p = (new_owner.clone(), *origination_block, current_block);
+			});
+
+			Self::deposit_event(RawEvent::ClaimOwnerChanged(sender, proof, new_owner));
 		}
 	}
 }
