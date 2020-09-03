@@ -1,3 +1,19 @@
+# Upgrade Tutorial
+
+The Proof-of-Existence code is available on the `PoE` branch.
+The upgraded code is available on the `upgrade` branch.
+
+## Steps
+
+1. Compile the `PoE` branch so you have the `node-template` binary (use `cargo build --release`). Usually located in the `target/release` folder on Linux systems.
+2. Save the `node-template` binary somewhere safe. Delete the `target` folder by running `cargo clean`.
+3. Switch to the `upgrade` branch and compile the new runtime using the same `cargo build --release` command.
+4. You now have the new runtime available in `target/release/wbuild/node-template-runtime/node_template_runtime.compact.wasm`.
+5. Start your original chain using the `node-template` binary in development mode: `node-template --dev`.
+6. Go to `https://polkadot.js.org/apps` and select the Local Chain option in the chain drop-down menu.
+7. In the Developer tab there is an "Extrinsics" tab for making transaction calls. But we will use the "Sudo" tab since we want to call a "superuser" function to upgrade the chain. Use Sudo -> System -> set_code and upload the Wasm file from step 4. When the next block is included your chain will be running the new runtime.j
+
+
 # Substrate Node Template
 
 A new FRAME-based Substrate node, ready for hacking :rocket:
